@@ -4,13 +4,22 @@ use crate::csv_types::*;
 use crate::engine::*;
 use crate::Account;
 
+macro_rules! csv_input {
+    ($($args:tt),* $(,)?) => {{
+        let mut engine = Engine::new();
+
+        $(engine.process(CsvRow::new$args);)*
+
+        engine.output()
+    }};
+}
+
 #[test]
 fn simple_deposits() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(5.0)));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(1.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(5.0)),
+    );
 
     assert_eq!(
         output,
@@ -27,14 +36,13 @@ fn simple_deposits() {
 
 #[test]
 fn multiple_deposits() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(5.0)));
+    let mut output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(1.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(5.0)),
+        (CsvTransaction::Deposit, 2, 3, Some(7.0)),
+        (CsvTransaction::Deposit, 2, 4, Some(11.0)),
+    );
 
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 2, 3, Some(7.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 2, 4, Some(11.0)));
-
-    let mut output = engine.output();
     output.sort_by(|a, b| a.client.partial_cmp(&b.client).unwrap());
 
     assert_eq!(
@@ -62,24 +70,22 @@ fn multiple_deposits() {
 
 #[test]
 fn simple_widthdrawl() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(5.0)));
-    engine.process(CsvRow::new(CsvTransaction::Withdrawal, 1, 2, Some(6.0)));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(1.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(5.0)),
+        (CsvTransaction::Withdrawal, 1, 2, Some(6.0)),
+    );
 
     assert_eq!(output, vec![Account::new(1)]);
 }
 
 #[test]
 fn simple_dispute() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(5.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Dispute, 1, 1, None));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(5.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(1.0)),
+        (CsvTransaction::Dispute, 1, 1, None),
+    );
 
     assert_eq!(
         output,
@@ -96,13 +102,12 @@ fn simple_dispute() {
 
 #[test]
 fn simple_dispute_resolve() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(5.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Dispute, 1, 1, None));
-    engine.process(CsvRow::new(CsvTransaction::Resolve, 1, 1, None));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(5.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(1.0)),
+        (CsvTransaction::Dispute, 1, 1, None),
+        (CsvTransaction::Resolve, 1, 1, None),
+    );
 
     assert_eq!(
         output,
@@ -119,13 +124,12 @@ fn simple_dispute_resolve() {
 
 #[test]
 fn simple_dispute_chargeback() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(5.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Dispute, 1, 1, None));
-    engine.process(CsvRow::new(CsvTransaction::Chargeback, 1, 1, None));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(5.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(1.0)),
+        (CsvTransaction::Dispute, 1, 1, None),
+        (CsvTransaction::Chargeback, 1, 1, None),
+    );
 
     assert_eq!(
         output,
@@ -142,12 +146,11 @@ fn simple_dispute_chargeback() {
 
 #[test]
 fn resolve_no_dispute() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(5.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Resolve, 1, 1, None));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(5.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(1.0)),
+        (CsvTransaction::Resolve, 1, 1, None),
+    );
 
     assert_eq!(
         output,
@@ -164,12 +167,11 @@ fn resolve_no_dispute() {
 
 #[test]
 fn chargeback_no_dispute() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(5.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Chargeback, 1, 1, None));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(5.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(1.0)),
+        (CsvTransaction::Chargeback, 1, 1, None),
+    );
 
     assert_eq!(
         output,
@@ -186,16 +188,13 @@ fn chargeback_no_dispute() {
 
 #[test]
 fn dispute_double_resolved() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(5.0)));
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 2, Some(1.0)));
-    engine.process(CsvRow::new(CsvTransaction::Dispute, 1, 1, None));
-    engine.process(CsvRow::new(CsvTransaction::Resolve, 1, 1, None));
-    engine.process(CsvRow::new(CsvTransaction::Resolve, 1, 1, None)); // We resolve it again but it
-                                                                      // shouldn't be under disput
-                                                                      // anymore
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(5.0)),
+        (CsvTransaction::Deposit, 1, 2, Some(1.0)),
+        (CsvTransaction::Dispute, 1, 1, None),
+        (CsvTransaction::Resolve, 1, 1, None),
+        (CsvTransaction::Resolve, 1, 1, None), // We resolve it again but it shouldn't be under dispute anymore
+    );
 
     assert_eq!(
         output,
@@ -212,12 +211,11 @@ fn dispute_double_resolved() {
 
 #[test]
 fn dispute_widthdrawal() {
-    let mut engine = Engine::new();
-    engine.process(CsvRow::new(CsvTransaction::Deposit, 1, 1, Some(10.0)));
-    engine.process(CsvRow::new(CsvTransaction::Withdrawal, 1, 2, Some(3.0)));
-    engine.process(CsvRow::new(CsvTransaction::Dispute, 1, 2, None));
-
-    let output = engine.output();
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(10.0)),
+        (CsvTransaction::Withdrawal, 1, 2, Some(3.0)),
+        (CsvTransaction::Dispute, 1, 2, None),
+    );
 
     assert_eq!(
         output,

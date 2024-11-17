@@ -31,9 +31,11 @@ impl TryFrom<&CsvRow> for ValidatedTransaction {
             (CsvTransaction::Chargeback, None) => {
                 ValidatedTransaction::Chargeback { tx: transaction.tx }
             }
-            // Only deposit and widthdrawls should have an amount. Everything else we'll assume was
-            // a mistake from the partner's side (as we do with other invalid entries).
+            // Only deposit and widthdrawls should have an amount. So if those are missing we'll
+            // assume a mistake from the partner's side.
             (CsvTransaction::Deposit | CsvTransaction::Withdrawal, None) => return Err(()),
+            // Everything else shouldn't have an amount. So if it does we'll also assume it was a
+            // partner mistake.
             (
                 CsvTransaction::Dispute | CsvTransaction::Resolve | CsvTransaction::Chargeback,
                 Some(_),
@@ -42,6 +44,7 @@ impl TryFrom<&CsvRow> for ValidatedTransaction {
     }
 }
 
+// TODO: Limit serialization to 4 decimal places
 #[derive(Debug, Serialize, PartialEq)]
 pub struct Account {
     pub client: u16,
@@ -50,6 +53,7 @@ pub struct Account {
     pub total: f32,
     pub locked: bool,
 
+    #[serde(skip_serializing)]
     pub disputed_transactions: HashSet<u32>,
 }
 

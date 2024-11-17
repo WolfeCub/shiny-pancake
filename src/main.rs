@@ -1,5 +1,5 @@
 use csv::{ReaderBuilder, Trim};
-use std::{collections::HashMap, io};
+use std::io;
 
 mod csv_types;
 use crate::csv_types::*;
@@ -13,9 +13,7 @@ use crate::engine::*;
 #[cfg(test)]
 mod tests;
 
-
 fn main() -> Result<(), io::Error> {
-
     let args = std::env::args().collect::<Vec<String>>();
     let path = args.get(1).expect("blah");
 
@@ -33,7 +31,6 @@ fn main() -> Result<(), io::Error> {
     for account in results {
         writer.serialize(account).expect("TODO");
     }
-    // println!("{:?}", rows);
 
     Ok(())
 }
