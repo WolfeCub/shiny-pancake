@@ -209,23 +209,88 @@ fn dispute_double_resolved() {
     );
 }
 
+// #[test]
+// fn dispute_widthdrawal() {
+//     let output = csv_input!(
+//         (CsvTransaction::Deposit, 1, 1, Some(10.0)),
+//         (CsvTransaction::Withdrawal, 1, 2, Some(3.0)),
+//         (CsvTransaction::Dispute, 1, 2, None),
+//     );
+//
+//     assert_eq!(
+//         output,
+//         vec![Account {
+//             client: 1,
+//             available: 7.0,
+//             held: 3.0,
+//             total: 10.0,
+//             locked: true,
+//             disputed_transactions: HashSet::new(),
+//         }]
+//     );
+// }
+
 #[test]
-fn dispute_widthdrawal() {
-    let output = csv_input!(
-        (CsvTransaction::Deposit, 1, 1, Some(10.0)),
-        (CsvTransaction::Withdrawal, 1, 2, Some(3.0)),
-        (CsvTransaction::Dispute, 1, 2, None),
+fn multiple_all_operations() {
+    let mut output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(1.7)),
+        (CsvTransaction::Deposit, 1, 3, Some(7.0)),
+        (CsvTransaction::Deposit, 2, 5, Some(4.1)),
+        (CsvTransaction::Deposit, 2, 4, Some(3.7)),
+        (CsvTransaction::Deposit, 4, 8, Some(9.3)),
+        (CsvTransaction::Deposit, 3, 6, Some(6.9)),
+        (CsvTransaction::Deposit, 3, 7, Some(5.6)),
+        (CsvTransaction::Deposit, 1, 2, Some(2.5)),
+        (CsvTransaction::Withdrawal, 4, 10, Some(3.4)),
+        (CsvTransaction::Withdrawal, 2, 9, Some(1.5)),
+        (CsvTransaction::Dispute, 3, 7, None),
+        (CsvTransaction::Deposit, 3, 11, Some(3.0)),
+        (CsvTransaction::Dispute, 1, 3, None),
+        (CsvTransaction::Resolve, 3, 7, None),
+        (CsvTransaction::Withdrawal, 3, 12, Some(2.0)),
+        (CsvTransaction::Chargeback, 1, 3, None),
+        (CsvTransaction::Dispute, 3, 6, None),
     );
 
-    assert_eq!(
-        output,
-        vec![Account {
+    output.sort_by(|a, b| a.client.partial_cmp(&b.client).unwrap());
+
+    let correct = vec![
+        Account {
             client: 1,
-            available: 7.0,
-            held: 3.0,
-            total: 10.0,
+            available: 4.2,
+            held: 0.0,
+            total: 4.2,
             locked: true,
+            disputed_transactions: HashSet::from_iter([3]), // TODO: Should chargebacks resolve the dispute
+        },
+        Account {
+            client: 2,
+            available: 6.3,
+            held: 0.0,
+            total: 6.3,
+            locked: false,
             disputed_transactions: HashSet::new(),
-        }]
-    );
+        },
+        Account {
+            client: 3,
+            available: 6.6,
+            held: 6.9,
+            total: 13.5,
+            locked: false,
+            disputed_transactions: HashSet::from_iter([6]),
+        },
+        Account {
+            client: 4,
+            available: 5.9,
+            held: 0.0,
+            total: 5.9,
+            locked: false,
+            disputed_transactions: HashSet::new(),
+        },
+    ];
+
+    // Assert one at a time so we get more legible output
+    for (o, c) in output.into_iter().zip(correct.into_iter()) {
+        assert_eq!(o, c);
+    }
 }

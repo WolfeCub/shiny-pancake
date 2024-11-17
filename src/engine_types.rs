@@ -82,12 +82,8 @@ impl Account {
         }
     }
 
-    pub fn dispute(&mut self, tx: u32, transaction_by_id: &HashMap<u32, &ValidatedTransaction>) {
-        let Some(disputed) = transaction_by_id.get(&tx) else {
-            return;
-        };
-
-        match disputed {
+    pub fn dispute(&mut self, tx: u32, disputed_transaction: &ValidatedTransaction) {
+        match disputed_transaction {
             ValidatedTransaction::Deposit { amount, .. } => {
                 self.available -= amount;
                 self.held += amount;
@@ -99,15 +95,12 @@ impl Account {
         }
     }
 
-    pub fn resolve(&mut self, tx: u32, transaction_by_id: &HashMap<u32, &ValidatedTransaction>) {
+    pub fn resolve(&mut self, tx: u32, disputed_transaction: &ValidatedTransaction) {
         if !self.disputed_transactions.contains(&tx) {
             return;
         }
 
-        let Some(disputed) = transaction_by_id.get(&tx) else {
-            return;
-        };
-        match disputed {
+        match disputed_transaction {
             ValidatedTransaction::Deposit { amount, .. } => {
                 self.available += amount;
                 self.held -= amount;
@@ -119,15 +112,12 @@ impl Account {
         }
     }
 
-    pub fn chargeback(&mut self, tx: u32, transaction_by_id: &HashMap<u32, &ValidatedTransaction>) {
+    pub fn chargeback(&mut self, tx: u32, disputed_transaction: &ValidatedTransaction) {
         if !self.disputed_transactions.contains(&tx) {
             return;
         }
 
-        let Some(disputed) = transaction_by_id.get(&tx) else {
-            return;
-        };
-        match disputed {
+        match disputed_transaction {
             ValidatedTransaction::Deposit { amount, .. } => {
                 self.held -= amount;
                 self.locked = true;

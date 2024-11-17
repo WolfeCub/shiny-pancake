@@ -1,6 +1,4 @@
-use std::
-    collections::HashMap
-;
+use std::collections::HashMap;
 
 use crate::{engine_types::*, Account, CsvRow};
 
@@ -57,13 +55,19 @@ impl Engine {
                     account.widthdraw(*amount);
                 }
                 ValidatedTransaction::Dispute { tx, .. } => {
-                    account.dispute(*tx, &transaction_by_id);
+                    transaction_by_id
+                        .get(&tx)
+                        .map(|disputed| account.dispute(*tx, disputed));
                 }
                 ValidatedTransaction::Resolve { tx, .. } => {
-                    account.resolve(*tx, &transaction_by_id);
+                    transaction_by_id
+                        .get(&tx)
+                        .map(|disputed| account.resolve(*tx, disputed));
                 }
                 ValidatedTransaction::Chargeback { tx, .. } => {
-                    account.chargeback(*tx, &transaction_by_id);
+                    transaction_by_id
+                        .get(&tx)
+                        .map(|disputed| account.chargeback(*tx, disputed));
                 }
             }
         }
