@@ -4,6 +4,24 @@ use crate::csv_types::*;
 use crate::engine::*;
 use crate::Account;
 
+
+impl CsvRow {
+    pub fn new(
+        transaction_type: CsvTransaction,
+        client: u16,
+        tx: u32,
+        amount: Option<f32>,
+    ) -> Self {
+        Self {
+            transaction_type,
+            client,
+            tx,
+            amount,
+        }
+    }
+}
+
+// Simple helper to reduce copy-paste and make our tests a bit more legible and look like CSV input
 macro_rules! csv_input {
     ($($args:tt),* $(,)?) => {{
         let mut engine = Engine::new();
@@ -209,26 +227,70 @@ fn dispute_double_resolved() {
     );
 }
 
-// #[test]
-// fn dispute_widthdrawal() {
-//     let output = csv_input!(
-//         (CsvTransaction::Deposit, 1, 1, Some(10.0)),
-//         (CsvTransaction::Withdrawal, 1, 2, Some(3.0)),
-//         (CsvTransaction::Dispute, 1, 2, None),
-//     );
-//
-//     assert_eq!(
-//         output,
-//         vec![Account {
-//             client: 1,
-//             available: 7.0,
-//             held: 3.0,
-//             total: 10.0,
-//             locked: true,
-//             disputed_transactions: HashSet::new(),
-//         }]
-//     );
-// }
+#[test]
+fn dispute_withdrawal() {
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(10.0)),
+        (CsvTransaction::Withdrawal, 1, 2, Some(3.0)),
+        (CsvTransaction::Dispute, 1, 2, None),
+    );
+
+    assert_eq!(
+        output,
+        vec![Account {
+            client: 1,
+            available: 7.0,
+            held: 3.0,
+            total: 10.0,
+            locked: false,
+            disputed_transactions: HashSet::from_iter([2]),
+        }]
+    );
+}
+
+#[test]
+fn dispute_resolve_withdrawal() {
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(10.0)),
+        (CsvTransaction::Withdrawal, 1, 2, Some(3.0)),
+        (CsvTransaction::Dispute, 1, 2, None),
+        (CsvTransaction::Resolve, 1, 2, None),
+    );
+
+    assert_eq!(
+        output,
+        vec![Account {
+            client: 1,
+            available: 7.0,
+            held: 0.0,
+            total: 7.0,
+            locked: false,
+            disputed_transactions: HashSet::new(),
+        }]
+    );
+}
+
+#[test]
+fn dispute_chargeback_withdrawal() {
+    let output = csv_input!(
+        (CsvTransaction::Deposit, 1, 1, Some(10.0)),
+        (CsvTransaction::Withdrawal, 1, 2, Some(3.0)),
+        (CsvTransaction::Dispute, 1, 2, None),
+        (CsvTransaction::Chargeback, 1, 2, None),
+    );
+
+    assert_eq!(
+        output,
+        vec![Account {
+            client: 1,
+            available: 10.0,
+            held: 0.0,
+            total: 10.0,
+            locked: true,
+            disputed_transactions: HashSet::from_iter([2]),
+        }]
+    );
+}
 
 #[test]
 fn multiple_all_operations() {
@@ -261,7 +323,7 @@ fn multiple_all_operations() {
             held: 0.0,
             total: 4.2,
             locked: true,
-            disputed_transactions: HashSet::from_iter([3]), // TODO: Should chargebacks resolve the dispute
+            disputed_transactions: HashSet::from_iter([3]),
         },
         Account {
             client: 2,

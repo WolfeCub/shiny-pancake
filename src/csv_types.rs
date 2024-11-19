@@ -18,20 +18,3 @@ pub struct CsvRow {
     pub tx: u32,
     pub amount: Option<f32>,
 }
-
-impl CsvRow {
-    pub fn new(
-        transaction_type: CsvTransaction,
-        client: u16,
-        tx: u32,
-        amount: Option<f32>,
-    ) -> Self {
-        Self {
-            transaction_type,
-            client,
-            tx,
-            amount,
-        }
-    }
-}
-

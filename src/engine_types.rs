@@ -90,7 +90,11 @@ impl Account {
 
                 self.disputed_transactions.insert(tx);
             }
-            // TODO: Can you dispute a widthdrawal?
+            ValidatedTransaction::Withdrawal { amount, .. } => {
+                self.held += amount;
+
+                self.disputed_transactions.insert(tx);
+            }
             _ => {}
         }
     }
@@ -107,7 +111,11 @@ impl Account {
 
                 self.disputed_transactions.remove(&tx);
             }
-            // TODO: Can you dispute a widthdrawal?
+            ValidatedTransaction::Withdrawal { amount, .. } => {
+                self.held -= amount;
+
+                self.disputed_transactions.remove(&tx);
+            }
             _ => {}
         }
     }
@@ -122,7 +130,12 @@ impl Account {
                 self.held -= amount;
                 self.locked = true;
             }
-            // TODO: Can you dispute a widthdrawal?
+            ValidatedTransaction::Withdrawal { amount, .. } => {
+                self.held -= amount;
+                self.available += amount;
+
+                self.locked = true;
+            }
             _ => {}
         }
     }

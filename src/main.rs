@@ -1,4 +1,5 @@
 use csv::{ReaderBuilder, Trim};
+use core::panic;
 use std::io;
 
 mod csv_types;
@@ -14,8 +15,11 @@ use crate::engine::*;
 mod tests;
 
 fn main() -> Result<(), io::Error> {
+    // NOTE: This is pretty primitive. Anything more complicated than a single arg I'd swap to using clap.
     let args = std::env::args().collect::<Vec<String>>();
-    let path = args.get(1).expect("blah");
+    let Some(path) = args.get(1) else {
+        panic!("No args specified. Please pass a single argument for the input file path.");
+    };
 
     let mut reader = ReaderBuilder::new()
         .trim(Trim::All)
@@ -29,7 +33,7 @@ fn main() -> Result<(), io::Error> {
     let mut writer = csv::Writer::from_writer(io::stdout());
     let results = engine.output();
     for account in results {
-        writer.serialize(account).expect("TODO");
+        writer.serialize(account)?;
     }
 
     Ok(())
