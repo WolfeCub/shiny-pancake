@@ -44,13 +44,25 @@ impl TryFrom<&CsvRow> for ValidatedTransaction {
     }
 }
 
-// TODO: Limit serialization to 4 decimal places
+fn four_decimal_places<S: serde::Serializer>(
+    value: &f32,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let rounded = (value * 10000.0).round() / 10000.0;
+    serializer.serialize_f32(rounded)
+}
+
 #[derive(Debug, Serialize, PartialEq)]
 pub struct Account {
     pub client: u16,
+
+    #[serde(serialize_with = "four_decimal_places")]
     pub available: f32,
+    #[serde(serialize_with = "four_decimal_places")]
     pub held: f32,
+    #[serde(serialize_with = "four_decimal_places")]
     pub total: f32,
+
     pub locked: bool,
 
     #[serde(skip_serializing)]
